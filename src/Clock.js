@@ -5,53 +5,67 @@ class Clock extends React.Component {
         super();
         this.state = {
             hour: 0, 
-            min: 0, 
-            second : 0, 
-            time : ""
+            minute: 0,
+            items: []
         };
         this.update = this.update.bind(this);
+        this.getHours = this.getHours.bind(this);
     }
 
     update(event){
-        const date = new Date().toLocaleString("en-US", {timeZone: this.props.timeZone}).split(" ")[1];
-        const time = date.split(":");        
-        this.setState({
-            hour: ((Number(time[0]) / 12) * 360) + 90, 
-            min: ((Number(time[1]) / 60) * 360) + 90, 
-            second : ((Number(time[2]) / 60) * 360) + 90, 
-            time : date
-        });        
+
+        fetch("http://localhost:3000/hour", { method: "POST" })
+            .then(response => {
+                return response.json()
+            }).then( (result) => {
+                this.setState( state => ({
+                    hour: ((result.hour / 12) * 360) + 90, 
+                    minute: ((result.minute  / 60) * 360) + 90,
+                    items: state.items.concat(result)
+                }));
+            }).catch( (error) => {
+                this.setState({
+                    hour: 90, 
+                    minute: 90
+                });
+            })
     }
 
-    componentWillMount(){        
-        setInterval(this.update, 1000);
+    getHours(){
+        fetch("http://localhost:3000/hours")
+            .then(response => {
+                return response.json()
+            }).then( (result) => {
+                this.setState({
+                    items: result
+                });
+            }).catch( (error) => {
+                this.setState({
+                    items: []
+                });
+            })
+        
+    }
+
+    componentWillMount(){
+        this.getHours();
         this.update();
     }
 
     render(){
         return (
                 <div>                    
-                    <h1>{this.props.timeZone} - {this.state.time}</h1>
                     <div className="clock">                 
                       <div className="clock-face">
                         <Hand type="hour" time={this.state.hour}/>
-                        <Hand type="min" time={this.state.min}/>
-                        <Hand type="second" time={this.state.second}/>
+                        <Hand type="min" time={this.state.minute}/>
                       </div>
                     </div>
-                    <hr/>
+                    <button onClick={this.update}>Get hour</button>
+                    <HourList items={this.state.items} />
                 </div>
             );
     };
-};
-
-Clock.propTypes = {
-    timeZone : React.PropTypes.string.isRequired
-};
-
-//Para establecer valores por defecto...
-Clock.defaultProps = {
-    timeZone : "America/Bogota"
 };
 
 class Hand extends React.Component{
@@ -61,5 +75,17 @@ class Hand extends React.Component{
         return <div className={nomClass} style={divStyle}></div>;
     };
 };
+
+class HourList extends React.Component {
+    render() {
+      return (
+        <ul>
+          {this.props.items.map(item => (
+            <li>{item.hour}:{item.minute}</li>
+          ))}
+        </ul>
+      );
+    }
+  }
 
 export default Clock;
